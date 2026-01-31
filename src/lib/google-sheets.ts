@@ -85,6 +85,8 @@ function parseCsv(csv: string, sheetName: SheetNames): any[] {
   const headerLine = lines.shift()!;
   const headers = headerLine.split(',').map(h => h.replace(/"/g, '').trim());
   const keyMap = KEY_MAPS[sheetName];
+  
+  const clientTimezoneIndex = headers.indexOf('Client Timezone');
 
   return lines.map(line => {
     const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
@@ -95,13 +97,67 @@ function parseCsv(csv: string, sheetName: SheetNames): any[] {
       if (modelKey) {
         let value = values[i]?.replace(/"/g, '').trim() || '';
 
-        if (modelKey.toLowerCase().includes('date') || modelKey.toLowerCase().includes('timestamp')) {
-            if (value) {
-                // Assuming format is 'M/D/YYYY' or 'M/D/YYYY H:mm:ss'
-                obj[modelKey] = new Date(value).toISOString();
-            } else {
-                obj[modelKey] = value;
+        if (sheetName === 'newProjectSubmissions' && modelKey === 'timestamp' && value) {
+            const match = value.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?: (\d{1,2}):(\d{1,2}):(\d{1,2}))?/);
+            if (match) {
+                const day = match[1].padStart(2, '0');
+                const month = match[2].padStart(2, '0');
+                const year = match[3];
+                const hour = match[4] ? match[4].padStart(2, '0') : '00';
+                const minute = match[5] ? match[5].padStart(2, '0') : '00';
+                const second = match[6] ? match[6].padStart(2, '0') : '00';
+                
+                const isoDateTime = `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+
+                let tzOffsetString = 'Z'; // Default to UTC
+                const tzString = clientTimezoneIndex !== -1 ? values[clientTimezoneIndex]?.replace(/"/g, '').trim() : '';
+                if (tzString) { // e.g. "GMT+10:00"
+                    const tzMatch = tzString.match(/GMT([+-])(\d{1,2}):(\d{2})/);
+                    if (tzMatch) {
+                        tzOffsetString = `${tzMatch[1]}${tzMatch[2].padStart(2, '0')}:${tzMatch[3]}`;
+                    }
+                }
+                
+                const date = new Date(`${isoDateTime}${tzOffsetString}`);
+                if (!isNaN(date.getTime())) {
+                    obj[modelKey] = date.toISOString();
+                } else {
+                    obj[modelKey] = value;
+                }
+            } else { // fallback
+                 const date = new Date(value);
+                 if (!isNaN(date.getTime())) {
+                     obj[modelKey] = date.toISOString();
+                 } else {
+                    obj[modelKey] = value;
+                 }
             }
+        } else if ((modelKey.toLowerCase().includes('date') || modelKey.toLowerCase().includes('timestamp')) && value) {
+            // Existing logic for other dates/timestamps
+             const match = value.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?: (\d{1,2}):(\d{1,2}):(\d{1,2}))?/);
+                if (match) {
+                    const day = parseInt(match[1], 10);
+                    const month = parseInt(match[2], 10) - 1; // JS month is 0-indexed
+                    const year = parseInt(match[3], 10);
+                    const hour = match[4] ? parseInt(match[4], 10) : 0;
+                    const minute = match[5] ? parseInt(match[5], 10) : 0;
+                    const second = match[6] ? parseInt(match[6], 10) : 0;
+                    
+                    const date = new Date(Date.UTC(year, month, day, hour, minute, second));
+                    if (!isNaN(date.getTime())) {
+                        obj[modelKey] = date.toISOString();
+                    } else {
+                        obj[modelKey] = value;
+                    }
+                } else {
+                    // Fallback for other formats
+                    const date = new Date(value);
+                    if (!isNaN(date.getTime())) {
+                        obj[modelKey] = date.toISOString();
+                    } else {
+                        obj[modelKey] = value;
+                    }
+                }
         } else if (modelKey === 'estimatedHours' || modelKey === 'estimatedCost' || modelKey === 'satisfactionScore') {
           obj[modelKey] = value ? parseFloat(value) : 0;
         } else {
