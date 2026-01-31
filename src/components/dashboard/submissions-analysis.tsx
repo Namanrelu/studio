@@ -8,9 +8,10 @@ import {
   startOfDay,
   endOfDay,
   isWithinInterval,
-  differenceInDays,
-  eachDayOfInterval,
-  eachHourOfInterval,
+  subDays,
+  startOfMonth,
+  endOfMonth,
+  subMonths,
 } from 'date-fns';
 import {
   Bar,
@@ -70,9 +71,15 @@ export function SubmissionsAnalysis({ projects }: SubmissionsAnalysisProps) {
   React.useEffect(() => {
     const now = new Date();
     let fromDate;
+    let toDate = endOfDay(now);
+    
     switch (rangeOption) {
-      case '1': // Today
+      case 'today':
         fromDate = startOfDay(now);
+        break;
+      case 'yesterday':
+        fromDate = startOfDay(subDays(now, 1));
+        toDate = endOfDay(subDays(now, 1));
         break;
       case '3': // Last 3 days
         fromDate = startOfDay(addDays(now, -2));
@@ -80,12 +87,26 @@ export function SubmissionsAnalysis({ projects }: SubmissionsAnalysisProps) {
       case '7': // Last 7 days
         fromDate = startOfDay(addDays(now, -6));
         break;
+      case 'this_month':
+        fromDate = startOfMonth(now);
+        break;
+      case 'last_month':
+        const lastMonthStart = startOfMonth(subMonths(now, 1));
+        fromDate = lastMonthStart;
+        toDate = endOfMonth(lastMonthStart);
+        break;
+      case 'last_3_months':
+        fromDate = startOfMonth(subMonths(now, 2));
+        break;
+      case 'all_time':
+        setDateRange(undefined);
+        return;
       case 'custom':
         return; // Custom range is handled by the calendar
       default:
         fromDate = startOfDay(addDays(now, -6));
     }
-    setDateRange({ from: fromDate, to: endOfDay(now) });
+    setDateRange({ from: fromDate, to: toDate });
   }, [rangeOption]);
 
   const handleDateSelect = (range: DateRange | undefined) => {
@@ -94,18 +115,19 @@ export function SubmissionsAnalysis({ projects }: SubmissionsAnalysisProps) {
     }
     if (range?.to) {
         range.to = endOfDay(range.to);
+    } else if (range?.from) {
+        range.to = endOfDay(range.from);
     }
+
     setDateRange(range);
-    if(range?.from && range?.to && differenceInDays(range.to, range.from) >= 0) {
+    
+    if(range?.from) {
         setRangeOption('custom');
-    } else if (range?.from && !range.to) {
-        // selecting a single day
-        setRangeOption('custom');
-        setDateRange({ from: startOfDay(range.from), to: endOfDay(range.from) });
     }
   };
 
   const filteredProjects = React.useMemo(() => {
+    if (!dateRange) return projects;
     if (!dateRange?.from) return [];
     const interval = { start: dateRange.from, end: dateRange.to || dateRange.from };
     return projects.filter(p =>
@@ -138,37 +160,24 @@ export function SubmissionsAnalysis({ projects }: SubmissionsAnalysisProps) {
   }, [filteredProjects]);
 
   const chartData: ChartData[] = React.useMemo(() => {
-    if (!dateRange?.from) return [];
-
-    const isSingleDay =
-      !dateRange.to || differenceInDays(dateRange.to, dateRange.from) === 0;
-
-    if (isSingleDay) {
-      const hours = eachHourOfInterval({
-        start: dateRange.from,
-        end: dateRange.to || endOfDay(dateRange.from),
-      });
-      return hours.map(hour => {
-        const count = filteredProjects.filter(p => {
-          const pDate = new Date(p.timestamp);
-          return pDate.getHours() === hour.getHours();
-        }).length;
-        return { label: format(hour, 'ha'), count };
-      });
-    } else {
-      const days = eachDayOfInterval({
-        start: dateRange.from,
-        end: dateRange.to,
-      });
-      return days.map(day => {
-        const count = filteredProjects.filter(p => {
-          const pDate = new Date(p.timestamp);
-          return startOfDay(pDate).getTime() === startOfDay(day).getTime();
-        }).length;
-        return { label: format(day, 'MMM d'), count };
-      });
-    }
-  }, [filteredProjects, dateRange]);
+    const hours = Array.from({ length: 24 }, (_, i) => i); // 0-23
+    
+    return hours.map(hour => {
+      const count = filteredProjects.filter(p => {
+        if (!p.timestamp) return false;
+        const submissionDate = new Date(p.timestamp);
+        return submissionDate.getHours() === hour;
+      }).length;
+      
+      const hourLabelDate = new Date();
+      hourLabelDate.setHours(hour, 0);
+      
+      return {
+        label: format(hourLabelDate, 'ha'),
+        count: count,
+      };
+    });
+  }, [filteredProjects]);
   
   const chartConfig = {
     count: {
@@ -179,6 +188,65 @@ export function SubmissionsAnalysis({ projects }: SubmissionsAnalysisProps) {
 
   return (
     <div className="space-y-4">
+       <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={rangeOption} onValueChange={setRangeOption}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select a range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="yesterday">Yesterday</SelectItem>
+                  <SelectItem value="3">Last 3 days</SelectItem>
+                  <SelectItem value="7">Last 7 days</SelectItem>
+                  <SelectItem value="this_month">This Month</SelectItem>
+                  <SelectItem value="last_month">Last Month</SelectItem>
+                  <SelectItem value="last_3_months">Last 3 Months</SelectItem>
+                  <SelectItem value="all_time">All Time</SelectItem>
+                  <SelectItem value="custom">Custom Range</SelectItem>
+                </SelectContent>
+              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={'outline'}
+                    className={cn(
+                      'w-full sm:w-[300px] justify-start text-left font-normal',
+                      !dateRange && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>
+                          {format(dateRange.from, 'LLL dd, y')} -{' '}
+                          {format(dateRange.to, 'LLL dd, y')}
+                        </>
+                      ) : (
+                        format(dateRange.from, 'LLL dd, y')
+                      )
+                    ) : (
+                      <span>Pick a date or range</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={handleDateSelect}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Projects"
@@ -207,62 +275,12 @@ export function SubmissionsAnalysis({ projects }: SubmissionsAnalysisProps) {
       </div>
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
-              <CardTitle className="font-headline">Incoming Projects</CardTitle>
+              <CardTitle className="font-headline">Incoming Projects by Hour</CardTitle>
               <CardDescription>
-                Number of new projects submitted over a selected period.
+                Aggregated project submissions by hour of the day for the selected period.
               </CardDescription>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Select value={rangeOption} onValueChange={setRangeOption}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select a range" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">Today</SelectItem>
-                  <SelectItem value="3">Last 3 days</SelectItem>
-                  <SelectItem value="7">Last 7 days</SelectItem>
-                  <SelectItem value="custom">Custom Range</SelectItem>
-                </SelectContent>
-              </Select>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={'outline'}
-                    className={cn(
-                      'w-full sm:w-[300px] justify-start text-left font-normal',
-                      !dateRange && 'text-muted-foreground'
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateRange?.from ? (
-                      dateRange.to ? (
-                        <>
-                          {format(dateRange.from, 'LLL dd, y')} -{' '}
-                          {format(dateRange.to, 'LLL dd, y')}
-                        </>
-                      ) : (
-                        format(dateRange.from, 'LLL dd, y')
-                      )
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    initialFocus
-                    mode="range"
-                    defaultMonth={dateRange?.from}
-                    selected={dateRange}
-                    onSelect={handleDateSelect}
-                    numberOfMonths={2}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[300px] w-full">
