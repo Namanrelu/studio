@@ -2,8 +2,6 @@ import { getGoogleSheetData } from '@/lib/google-sheets';
 import { buildDatabaseRows } from '@/lib/project-utils';
 import { ProjectSearch } from '@/components/dashboard/project-search';
 
-export const dynamic = 'force-dynamic';
-
 export default async function SearchPage() {
   const googleSheetData = await getGoogleSheetData();
   const databaseRows = buildDatabaseRows(googleSheetData);

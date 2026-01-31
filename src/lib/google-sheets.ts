@@ -236,7 +236,7 @@ async function fetchSheet(sheetName: SheetNames): Promise<any[]> {
   }
 }
 
-export function dedupeByProjectId<T extends { projectId?: string; timestamp?: string }>(items: T[]): T[] {
+function dedupeByProjectId<T extends { projectId?: string; timestamp?: string }>(items: T[]): T[] {
   const itemMap = new Map<string, T>();
   items.forEach(item => {
     if (!item.projectId) {
@@ -256,7 +256,7 @@ export function dedupeByProjectId<T extends { projectId?: string; timestamp?: st
   return Array.from(itemMap.values());
 }
 
-async function loadSheets(): Promise<AllSubmissions> {
+export async function getGoogleSheetData(): Promise<AllSubmissions> {
   const [
     newProjectSubmissions,
     versionUpgradeSubmissions,
@@ -274,12 +274,36 @@ async function loadSheets(): Promise<AllSubmissions> {
   ]);
 
   return {
-    newProjectSubmissions: newProjectSubmissions as NewProjectSubmission[],
-    versionUpgradeSubmissions: versionUpgradeSubmissions as VersionUpgradeSubmission[],
-    projectEstimationSubmissions: projectEstimationSubmissions as ProjectEstimationSubmission[],
-    projectApprovalSubmissions: projectApprovalSubmissions as ProjectApprovalSubmission[],
-    projectDeliverySubmissions: projectDeliverySubmissions as ProjectDeliverySubmission[],
-    projectFeedbackSubmissions: projectFeedbackSubmissions as ProjectFeedbackSubmission[],
+    newProjectSubmissions: dedupeByProjectId(newProjectSubmissions) as NewProjectSubmission[],
+    versionUpgradeSubmissions: dedupeByProjectId(versionUpgradeSubmissions) as VersionUpgradeSubmission[],
+    projectEstimationSubmissions: dedupeByProjectId(projectEstimationSubmissions) as ProjectEstimationSubmission[],
+    projectApprovalSubmissions: dedupeByProjectId(projectApprovalSubmissions) as ProjectApprovalSubmission[],
+    projectDeliverySubmissions: dedupeByProjectId(projectDeliverySubmissions) as ProjectDeliverySubmission[],
+    projectFeedbackSubmissions: dedupeByProjectId(projectFeedbackSubmissions) as ProjectFeedbackSubmission[],
+  };
+}
+
+export async function getGoogleSheetRawData(): Promise<AllSubmissions> {
+  return loadSheets();
+}
+
+export async function getGoogleSheetData(): Promise<AllSubmissions> {
+  const {
+    newProjectSubmissions,
+    versionUpgradeSubmissions,
+    projectEstimationSubmissions,
+    projectApprovalSubmissions,
+    projectDeliverySubmissions,
+    projectFeedbackSubmissions,
+  } = await loadSheets();
+
+  return {
+    newProjectSubmissions: dedupeByProjectId(newProjectSubmissions) as NewProjectSubmission[],
+    versionUpgradeSubmissions: dedupeByProjectId(versionUpgradeSubmissions) as VersionUpgradeSubmission[],
+    projectEstimationSubmissions: dedupeByProjectId(projectEstimationSubmissions) as ProjectEstimationSubmission[],
+    projectApprovalSubmissions: dedupeByProjectId(projectApprovalSubmissions) as ProjectApprovalSubmission[],
+    projectDeliverySubmissions: dedupeByProjectId(projectDeliverySubmissions) as ProjectDeliverySubmission[],
+    projectFeedbackSubmissions: dedupeByProjectId(projectFeedbackSubmissions) as ProjectFeedbackSubmission[],
   };
 }
 

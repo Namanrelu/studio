@@ -4,8 +4,6 @@ import { createCsv } from '@/lib/csv';
 import { sheetCsvConfigs } from '@/lib/sheet-csv';
 import { DownloadSheetList } from '@/components/dashboard/download-sheet-list';
 
-export const dynamic = 'force-dynamic';
-
 export default async function UnmappedRowsPage() {
   const rawData = await getGoogleSheetRawData();
   const unmapped = buildUnmappedRows(rawData);
