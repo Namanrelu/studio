@@ -42,9 +42,15 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Calendar as CalendarIcon, Package, Sunrise, Sun, Moon, ClipboardEdit } from 'lucide-react';
+import { Calendar as CalendarIcon, Package, Sunrise, Sun, Moon, ClipboardEdit, BadgeCheck, Truck, MessageSquareText } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { NewProjectSubmission, ProjectEstimationSubmission } from '@/lib/types';
+import {
+  NewProjectSubmission,
+  ProjectApprovalSubmission,
+  ProjectDeliverySubmission,
+  ProjectEstimationSubmission,
+  ProjectFeedbackSubmission,
+} from '@/lib/types';
 import {
   ChartContainer,
   ChartTooltip,
@@ -55,6 +61,9 @@ import { StatCard } from './stat-card';
 type SubmissionsAnalysisProps = {
   projects: NewProjectSubmission[];
   estimations: ProjectEstimationSubmission[];
+  approvals: ProjectApprovalSubmission[];
+  deliveries: ProjectDeliverySubmission[];
+  feedback: ProjectFeedbackSubmission[];
 };
 
 type ChartData = {
@@ -62,7 +71,13 @@ type ChartData = {
   count: number;
 };
 
-export function SubmissionsAnalysis({ projects, estimations }: SubmissionsAnalysisProps) {
+export function SubmissionsAnalysis({
+  projects,
+  estimations,
+  approvals,
+  deliveries,
+  feedback,
+}: SubmissionsAnalysisProps) {
   const [rangeOption, setRangeOption] = React.useState<string>('7');
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
     from: startOfDay(addDays(new Date(), -6)),
@@ -136,6 +151,33 @@ export function SubmissionsAnalysis({ projects, estimations }: SubmissionsAnalys
     );
   }, [projects, dateRange]);
 
+  const filteredApprovals = React.useMemo(() => {
+    if (!dateRange) return approvals;
+    if (!dateRange.from) return [];
+    const interval = { start: dateRange.from, end: dateRange.to || dateRange.from };
+    return approvals.filter(p =>
+      p.timestamp && isWithinInterval(new Date(p.timestamp), interval)
+    );
+  }, [approvals, dateRange]);
+
+  const filteredDeliveries = React.useMemo(() => {
+    if (!dateRange) return deliveries;
+    if (!dateRange.from) return [];
+    const interval = { start: dateRange.from, end: dateRange.to || dateRange.from };
+    return deliveries.filter(p =>
+      p.timestamp && isWithinInterval(new Date(p.timestamp), interval)
+    );
+  }, [deliveries, dateRange]);
+
+  const filteredFeedback = React.useMemo(() => {
+    if (!dateRange) return feedback;
+    if (!dateRange.from) return [];
+    const interval = { start: dateRange.from, end: dateRange.to || dateRange.from };
+    return feedback.filter(p =>
+      p.timestamp && isWithinInterval(new Date(p.timestamp), interval)
+    );
+  }, [feedback, dateRange]);
+
   const estimatedProjectsCount = React.useMemo(() => {
     if (!filteredProjects.length) return 0;
     const estimationProjectIds = new Set(estimations.map(e => e.projectId));
@@ -143,6 +185,9 @@ export function SubmissionsAnalysis({ projects, estimations }: SubmissionsAnalys
   }, [filteredProjects, estimations]);
   
   const totalProjects = filteredProjects.length;
+  const approvedCount = filteredApprovals.length;
+  const deliveredCount = filteredDeliveries.length;
+  const feedbackCount = filteredFeedback.length;
 
   const timeSlots = React.useMemo(() => {
     const slots = {
@@ -294,7 +339,7 @@ export function SubmissionsAnalysis({ projects, estimations }: SubmissionsAnalys
           </div>
         </CardHeader>
       </Card>
-      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
         <StatCard
           title="Total Projects"
           value={totalProjects}
@@ -306,6 +351,24 @@ export function SubmissionsAnalysis({ projects, estimations }: SubmissionsAnalys
           value={`${estimatedProjectsCount} / ${totalProjects}`}
           icon={ClipboardEdit}
           description="Of projects in selected range"
+        />
+        <StatCard
+          title="Approved Projects"
+          value={approvedCount}
+          icon={BadgeCheck}
+          description="Approvals in selected range"
+        />
+        <StatCard
+          title="Delivered Projects"
+          value={deliveredCount}
+          icon={Truck}
+          description="Deliveries in selected range"
+        />
+        <StatCard
+          title="Feedback Received"
+          value={feedbackCount}
+          icon={MessageSquareText}
+          description="Feedback in selected range"
         />
         <StatCard
           title="Morning"

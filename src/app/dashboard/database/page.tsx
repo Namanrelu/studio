@@ -1,13 +1,7 @@
 import { getGoogleSheetData } from '@/lib/google-sheets';
-import { NewProjectSubmission } from '@/lib/types';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { buildDatabaseRows } from '@/lib/project-utils';
+import { createCsv } from '@/lib/csv';
+import { DatabaseExport } from '@/components/dashboard/database-export';
 import {
   Card,
   CardHeader,
@@ -15,24 +9,87 @@ import {
   CardContent,
   CardDescription,
 } from '@/components/ui/card';
-import { format } from 'date-fns';
-
-function getUniqueProjects(projects: NewProjectSubmission[]): NewProjectSubmission[] {
-  const projectMap = new Map<string, NewProjectSubmission>();
-  projects.forEach(project => {
-    if (project.projectId) {
-      const existing = projectMap.get(project.projectId);
-      if (!existing || new Date(project.timestamp) > new Date(existing.timestamp)) {
-        projectMap.set(project.projectId, project);
-      }
-    }
-  });
-  return Array.from(projectMap.values());
-}
 
 export default async function DatabasePage() {
   const googleSheetData = await getGoogleSheetData();
-  const uniqueProjects = getUniqueProjects(googleSheetData.newProjectSubmissions);
+  const databaseRows = buildDatabaseRows(googleSheetData);
+  const csvHeaders = [
+    'Project ID',
+    'New Project Timestamp',
+    'Project Name',
+    'Client Name',
+    'Email',
+    'Company Name',
+    'Company Type',
+    'Project Description',
+    'Client Message',
+    'Client Country',
+    'Client Timezone',
+    'Communication Platforms',
+    'Business Manager',
+    'Internal Instructions',
+    'Attachments',
+    'GDrive Folder Link',
+    'Version Upgrade Timestamp',
+    'Version',
+    'New Requirements',
+    'Estimation Timestamp',
+    'Estimated Hours',
+    'Estimated Cost',
+    'Approval Timestamp',
+    'Approved By',
+    'Approval Date',
+    'Expected Delivery Date',
+    'Delivery Method',
+    'Delivery Timestamp',
+    'Delivery Date',
+    'Delivered By',
+    'Delivery Notes',
+    'Feedback Timestamp',
+    'Satisfaction Score',
+    'Feedback',
+    'Client Contact',
+  ];
+
+  const csvRows = databaseRows.map(row => ({
+    'Project ID': row.projectId,
+    'New Project Timestamp': row.newProject?.timestamp ?? '',
+    'Project Name': row.newProject?.projectName ?? '',
+    'Client Name': row.newProject?.clientName ?? '',
+    'Email': row.newProject?.emailAddress ?? '',
+    'Company Name': row.newProject?.companyName ?? '',
+    'Company Type': row.newProject?.companyType ?? '',
+    'Project Description': row.newProject?.projectDescription ?? '',
+    'Client Message': row.newProject?.clientMessage ?? '',
+    'Client Country': row.newProject?.clientCountry ?? '',
+    'Client Timezone': row.newProject?.clientTimezone ?? '',
+    'Communication Platforms': row.newProject?.communicationPlatforms ?? '',
+    'Business Manager': row.newProject?.businessManager ?? '',
+    'Internal Instructions': row.newProject?.internalInstructions ?? '',
+    'Attachments': row.newProject?.attachments ?? '',
+    'GDrive Folder Link': row.newProject?.gdriveFolderLink ?? '',
+    'Version Upgrade Timestamp': row.versionUpgrade?.timestamp ?? '',
+    'Version': row.versionUpgrade?.version ?? '',
+    'New Requirements': row.versionUpgrade?.newRequirements ?? '',
+    'Estimation Timestamp': row.estimation?.timestamp ?? '',
+    'Estimated Hours': row.estimation?.estimatedHours ?? '',
+    'Estimated Cost': row.estimation?.estimatedCost ?? '',
+    'Approval Timestamp': row.approval?.timestamp ?? '',
+    'Approved By': row.approval?.approvedBy ?? '',
+    'Approval Date': row.approval?.approvalDate ?? '',
+    'Expected Delivery Date': row.approval?.expectedDeliveryDate ?? '',
+    'Delivery Method': row.approval?.deliveryMethod ?? '',
+    'Delivery Timestamp': row.delivery?.timestamp ?? '',
+    'Delivery Date': row.delivery?.deliveryDate ?? '',
+    'Delivered By': row.delivery?.deliveredBy ?? '',
+    'Delivery Notes': row.delivery?.notes ?? '',
+    'Feedback Timestamp': row.feedback?.timestamp ?? '',
+    'Satisfaction Score': row.feedback?.satisfactionScore ?? '',
+    'Feedback': row.feedback?.feedback ?? '',
+    'Client Contact': row.feedback?.clientContact ?? '',
+  }));
+
+  const csvContent = createCsv(csvHeaders, csvRows);
 
   return (
     <main className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -40,34 +97,11 @@ export default async function DatabasePage() {
         <CardHeader>
           <CardTitle className="font-headline">Project Database</CardTitle>
           <CardDescription>
-            A list of all unique projects from the Google Sheet. Duplicates are handled by showing the most recent entry.
+            A consolidated view of each project across the selected subsheets. Duplicate entries are removed by using the most recent submission per project.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Project ID</TableHead>
-                <TableHead>Project Name</TableHead>
-                <TableHead>Client Name</TableHead>
-                <TableHead>Submission Date</TableHead>
-                <TableHead>Business Manager</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {uniqueProjects.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map(project => (
-                <TableRow key={project.projectId}>
-                  <TableCell className="font-medium">{project.projectId}</TableCell>
-                  <TableCell>{project.projectName}</TableCell>
-                  <TableCell>{project.clientName}</TableCell>
-                  <TableCell>
-                    {project.timestamp ? format(new Date(project.timestamp), 'MMM dd, yyyy HH:mm') : 'N/A'}
-                  </TableCell>
-                  <TableCell>{project.businessManager}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <DatabaseExport csvContent={csvContent} filename="project-database.csv" />
         </CardContent>
       </Card>
     </main>

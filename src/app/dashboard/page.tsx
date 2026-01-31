@@ -36,7 +36,13 @@ export default async function DashboardPage() {
 
   return (
     <main className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <SubmissionsAnalysis projects={uniqueProjects} estimations={uniqueEstimations} />
+      <SubmissionsAnalysis
+        projects={uniqueProjects}
+        estimations={uniqueEstimations}
+        approvals={googleSheetData.projectApprovalSubmissions}
+        deliveries={googleSheetData.projectDeliverySubmissions}
+        feedback={googleSheetData.projectFeedbackSubmissions}
+      />
     </main>
   );
 }
