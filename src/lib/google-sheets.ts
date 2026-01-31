@@ -79,23 +79,66 @@ type SheetNames = keyof typeof GID_MAP;
 
 
 function parseCsv(csv: string, sheetName: SheetNames): any[] {
-  const lines = csv.split('\n').filter(line => line.trim() !== '');
-  if (lines.length < 2) return [];
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = '';
+  let inQuotes = false;
+  csv = csv.replace(/\r/g, '');
 
-  const headerLine = lines.shift()!;
-  const headers = headerLine.split(',').map(h => h.replace(/"/g, '').trim());
+  for (let i = 0; i < csv.length; i++) {
+      const char = csv[i];
+
+      if (inQuotes) {
+          if (char === '"') {
+              if (i < csv.length - 1 && csv[i+1] === '"') {
+                  field += '"';
+                  i++; // Skip the second quote in `""`
+              } else {
+                  inQuotes = false;
+              }
+          } else {
+              field += char;
+          }
+      } else {
+          if (char === '"') {
+              inQuotes = true;
+          } else if (char === ',') {
+              row.push(field);
+              field = '';
+          } else if (char === '\n') {
+              row.push(field);
+              rows.push(row);
+              row = [];
+              field = '';
+          } else {
+              field += char;
+          }
+      }
+  }
+  // Add the last part
+  if (field || row.length > 0) {
+    row.push(field);
+    rows.push(row);
+  }
+
+  const nonEmptyRows = rows.filter(r => r.length > 1 || (r.length === 1 && r[0].trim() !== ''));
+
+  if (nonEmptyRows.length < 2) {
+    return [];
+  }
+
+  const headers = nonEmptyRows.shift()!.map(h => h.trim());
   const keyMap = KEY_MAPS[sheetName];
   
   const clientTimezoneIndex = headers.indexOf('Client Timezone');
 
-  return lines.map(line => {
-    const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+  return nonEmptyRows.map(values => {
     const obj: { [key: string]: any } = {};
 
     headers.forEach((header, i) => {
       const modelKey = keyMap[header as keyof typeof keyMap];
-      if (modelKey) {
-        let value = values[i]?.replace(/"/g, '').trim() || '';
+      if (modelKey && i < values.length) {
+        let value = values[i]?.trim() || '';
 
         if (sheetName === 'newProjectSubmissions' && modelKey === 'timestamp' && value) {
             const match = value.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?: (\d{1,2}):(\d{1,2}):(\d{1,2}))?/);
@@ -133,31 +176,29 @@ function parseCsv(csv: string, sheetName: SheetNames): any[] {
                  }
             }
         } else if ((modelKey.toLowerCase().includes('date') || modelKey.toLowerCase().includes('timestamp')) && value) {
-            // Existing logic for other dates/timestamps
-             const match = value.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?: (\d{1,2}):(\d{1,2}):(\d{1,2}))?/);
-                if (match) {
-                    const day = parseInt(match[1], 10);
-                    const month = parseInt(match[2], 10) - 1; // JS month is 0-indexed
-                    const year = parseInt(match[3], 10);
-                    const hour = match[4] ? parseInt(match[4], 10) : 0;
-                    const minute = match[5] ? parseInt(match[5], 10) : 0;
-                    const second = match[6] ? parseInt(match[6], 10) : 0;
-                    
-                    const date = new Date(Date.UTC(year, month, day, hour, minute, second));
-                    if (!isNaN(date.getTime())) {
-                        obj[modelKey] = date.toISOString();
-                    } else {
-                        obj[modelKey] = value;
-                    }
+            const match = value.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?: (\d{1,2}):(\d{1,2}):(\d{1,2}))?/);
+            if (match) {
+                const day = parseInt(match[1], 10);
+                const month = parseInt(match[2], 10) - 1; // JS month is 0-indexed
+                const year = parseInt(match[3], 10);
+                const hour = match[4] ? parseInt(match[4], 10) : 0;
+                const minute = match[5] ? parseInt(match[5], 10) : 0;
+                const second = match[6] ? parseInt(match[6], 10) : 0;
+                
+                const date = new Date(Date.UTC(year, month, day, hour, minute, second));
+                if (!isNaN(date.getTime())) {
+                    obj[modelKey] = date.toISOString();
                 } else {
-                    // Fallback for other formats
-                    const date = new Date(value);
-                    if (!isNaN(date.getTime())) {
-                        obj[modelKey] = date.toISOString();
-                    } else {
-                        obj[modelKey] = value;
-                    }
+                    obj[modelKey] = value;
                 }
+            } else {
+                const date = new Date(value);
+                if (!isNaN(date.getTime())) {
+                    obj[modelKey] = date.toISOString();
+                } else {
+                    obj[modelKey] = value;
+                }
+            }
         } else if (modelKey === 'estimatedHours' || modelKey === 'estimatedCost' || modelKey === 'satisfactionScore') {
           obj[modelKey] = value ? parseFloat(value) : 0;
         } else {
