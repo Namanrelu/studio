@@ -206,6 +206,13 @@ function parseCsv(csv: string, sheetName: SheetNames): any[] {
         }
       }
     });
+
+    if (sheetName === 'newProjectSubmissions') {
+        if (obj.projectName && obj.clientName) {
+            obj.projectId = `${obj.projectName} - ${obj.clientName}`;
+        }
+    }
+
     return obj;
   });
 }
