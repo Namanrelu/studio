@@ -1,22 +1,20 @@
-import { mockData } from '@/lib/data';
+import { getGoogleSheetData } from '@/lib/google-sheets';
 import { combineProjectData, calculateKpis } from '@/lib/metrics';
 import { MetricCard } from '@/components/dashboard/metric-card';
 import {
   Activity,
   CheckCircle,
-  Clock,
   Smile,
   Target,
 } from 'lucide-react';
 import { ProjectVelocityChart } from '@/components/dashboard/project-velocity-chart';
-import { EstimationAccuracyChart } from '@/components/dashboard/estimation-accuracy-chart';
 import { RecentFeedback } from '@/components/dashboard/recent-feedback';
-import { AITrends } from '@/components/dashboard/ai-trends';
 import { ProjectsTable } from '@/components/dashboard/projects-table';
 import { ClientSatisfactionChart } from '@/components/dashboard/client-satisfaction-chart';
 
-export default function DashboardPage() {
-  const combinedData = combineProjectData(mockData);
+export default async function DashboardPage() {
+  const googleSheetData = await getGoogleSheetData();
+  const combinedData = combineProjectData(googleSheetData);
   const kpis = calculateKpis(combinedData);
 
   return (
@@ -57,14 +55,11 @@ export default function DashboardPage() {
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <AITrends data={mockData} />
+          <ProjectsTable data={combinedData} />
         </div>
         <div className="lg:col-span-1">
           <RecentFeedback data={combinedData} />
         </div>
-      </div>
-      <div>
-        <ProjectsTable data={combinedData} />
       </div>
     </main>
   );
