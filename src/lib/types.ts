@@ -64,23 +64,3 @@ export type AllSubmissions = {
   projectDeliverySubmissions: ProjectDeliverySubmission[];
   projectFeedbackSubmissions: ProjectFeedbackSubmission[];
 }
-
-export type CombinedProjectData = {
-  id: string;
-  name: string;
-  client: string;
-  approvalDate?: Date;
-  expectedDelivery?: Date;
-  actualDelivery?: Date;
-  estimatedHours?: number;
-  satisfaction?: number;
-  feedback?: string;
-  status: 'Planning' | 'Approved' | 'In Progress' | 'Delivered' | 'Delayed' | 'On Hold';
-};
-
-export type Kpi = {
-  totalProjects: number;
-  onTimeDeliveryRate: number;
-  avgSatisfaction: number;
-  estimationAccuracy: number;
-};

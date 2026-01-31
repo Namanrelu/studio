@@ -17,6 +17,7 @@ import {
   Settings,
   User,
   LogOut,
+  Database,
 } from 'lucide-react';
 
 import {
@@ -54,11 +55,19 @@ export default function DashboardLayout({
             <SidebarMenuItem>
               <SidebarMenuButton
                 href="/dashboard"
-                isActive
                 tooltip={{ children: 'Dashboard' }}
               >
                 <LayoutDashboard />
                 <span>Dashboard</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                href="/dashboard/database"
+                tooltip={{ children: 'Database' }}
+              >
+                <Database />
+                <span>Database</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
