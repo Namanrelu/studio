@@ -128,7 +128,7 @@ export function SubmissionsAnalysis({ projects }: SubmissionsAnalysisProps) {
 
   const filteredProjects = React.useMemo(() => {
     if (!dateRange) return projects;
-    if (!dateRange?.from) return [];
+    if (!dateRange.from) return [];
     const interval = { start: dateRange.from, end: dateRange.to || dateRange.from };
     return projects.filter(p =>
       p.timestamp && isWithinInterval(new Date(p.timestamp), interval)
@@ -159,7 +159,7 @@ export function SubmissionsAnalysis({ projects }: SubmissionsAnalysisProps) {
     return slots;
   }, [filteredProjects]);
 
-  const chartData: ChartData[] = React.useMemo(() => {
+  const chartDataByHour: ChartData[] = React.useMemo(() => {
     const hours = Array.from({ length: 24 }, (_, i) => i); // 0-23
     
     return hours.map(hour => {
@@ -179,6 +179,46 @@ export function SubmissionsAnalysis({ projects }: SubmissionsAnalysisProps) {
     });
   }, [filteredProjects]);
   
+  const chartDataByDay: ChartData[] = React.useMemo(() => {
+    const dayCounts = new Map<string, number>();
+
+    // This ensures we have a continuous range of dates for the chart axis
+    if (dateRange && dateRange.from) {
+        let current = startOfDay(dateRange.from);
+        const end = endOfDay(dateRange.to || dateRange.from);
+        while(current <= end) {
+            dayCounts.set(format(current, 'yyyy-MM-dd'), 0);
+            current = addDays(current, 1);
+        }
+    }
+    
+    filteredProjects.forEach(p => {
+        if (p.timestamp) {
+            const day = format(new Date(p.timestamp), 'yyyy-MM-dd');
+            // For all_time, we only add days that have projects
+            if (dayCounts.has(day) || !dateRange) {
+                 dayCounts.set(day, (dayCounts.get(day) || 0) + 1);
+            }
+        }
+    });
+    
+    const sortedData = Array.from(dayCounts.entries(), ([label, count]) => ({ label, count }))
+        .sort((a,b) => a.label.localeCompare(b.label));
+
+    return sortedData;
+  }, [filteredProjects, dateRange]);
+
+  const chartDataByCountry: ChartData[] = React.useMemo(() => {
+    const countryCounts = new Map<string, number>();
+    filteredProjects.forEach(p => {
+        const country = p.clientCountry?.trim() || 'Unknown';
+        countryCounts.set(country, (countryCounts.get(country) || 0) + 1);
+    });
+
+    return Array.from(countryCounts, ([label, count]) => ({ label, count }))
+        .sort((a, b) => b.count - a.count);
+  }, [filteredProjects]);
+
   const chartConfig = {
     count: {
       label: 'Projects',
@@ -228,7 +268,7 @@ export function SubmissionsAnalysis({ projects }: SubmissionsAnalysisProps) {
                         format(dateRange.from, 'LLL dd, y')
                       )
                     ) : (
-                      <span>Pick a date or range</span>
+                      <span>All Time</span>
                     )}
                   </Button>
                 </PopoverTrigger>
@@ -284,7 +324,68 @@ export function SubmissionsAnalysis({ projects }: SubmissionsAnalysisProps) {
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[300px] w-full">
-            <BarChart data={chartData} accessibilityLayer>
+            <BarChart data={chartDataByHour} accessibilityLayer>
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="label"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+              />
+              <YAxis allowDecimals={false} />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Bar
+                dataKey="count"
+                fill="var(--color-count)"
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ChartContainer>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+            <div>
+              <CardTitle className="font-headline">Incoming Projects by Day</CardTitle>
+              <CardDescription>
+                Number of project submissions per day for the selected period.
+              </CardDescription>
+            </div>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={chartConfig} className="h-[300px] w-full">
+            <BarChart data={chartDataByDay} accessibilityLayer>
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="label"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                tickFormatter={(value) => format(new Date(value), "MMM d")}
+              />
+              <YAxis allowDecimals={false} />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Bar
+                dataKey="count"
+                fill="var(--color-count)"
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ChartContainer>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+            <div>
+              <CardTitle className="font-headline">Projects by Country</CardTitle>
+              <CardDescription>
+                Breakdown of project submissions by country for the selected period.
+              </CardDescription>
+            </div>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={chartConfig} className="h-[300px] w-full">
+            <BarChart data={chartDataByCountry} accessibilityLayer>
               <CartesianGrid vertical={false} />
               <XAxis
                 dataKey="label"
