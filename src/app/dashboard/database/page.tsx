@@ -1,7 +1,20 @@
 import { getGoogleSheetData } from '@/lib/google-sheets';
-import { buildDatabaseRows } from '@/lib/project-utils';
-import { createCsv } from '@/lib/csv';
-import { DatabaseExport } from '@/components/dashboard/database-export';
+import {
+  NewProjectSubmission,
+  ProjectApprovalSubmission,
+  ProjectDeliverySubmission,
+  ProjectEstimationSubmission,
+  ProjectFeedbackSubmission,
+  VersionUpgradeSubmission,
+} from '@/lib/types';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   Card,
   CardHeader,
@@ -9,87 +22,72 @@ import {
   CardContent,
   CardDescription,
 } from '@/components/ui/card';
+import { format } from 'date-fns';
+
+type DatabaseRow = {
+  projectId: string;
+  newProject?: NewProjectSubmission;
+  versionUpgrade?: VersionUpgradeSubmission;
+  estimation?: ProjectEstimationSubmission;
+  approval?: ProjectApprovalSubmission;
+  delivery?: ProjectDeliverySubmission;
+  feedback?: ProjectFeedbackSubmission;
+};
+
+function formatDate(value?: string) {
+  if (!value) return 'N/A';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return format(date, 'MMM dd, yyyy HH:mm');
+}
+
+function buildDatabaseRows(data: Awaited<ReturnType<typeof getGoogleSheetData>>): DatabaseRow[] {
+  const projectMap = new Map<string, DatabaseRow>();
+
+  const ensureRow = (projectId: string) => {
+    const existing = projectMap.get(projectId);
+    if (existing) return existing;
+    const row = { projectId };
+    projectMap.set(projectId, row);
+    return row;
+  };
+
+  data.newProjectSubmissions.forEach(submission => {
+    const row = ensureRow(submission.projectId);
+    row.newProject = submission;
+  });
+
+  data.versionUpgradeSubmissions.forEach(submission => {
+    const row = ensureRow(submission.projectId);
+    row.versionUpgrade = submission;
+  });
+
+  data.projectEstimationSubmissions.forEach(submission => {
+    const row = ensureRow(submission.projectId);
+    row.estimation = submission;
+  });
+
+  data.projectApprovalSubmissions.forEach(submission => {
+    const row = ensureRow(submission.projectId);
+    row.approval = submission;
+  });
+
+  data.projectDeliverySubmissions.forEach(submission => {
+    const row = ensureRow(submission.projectId);
+    row.delivery = submission;
+  });
+
+  data.projectFeedbackSubmissions.forEach(submission => {
+    const row = ensureRow(submission.projectId);
+    row.feedback = submission;
+  });
+
+  return Array.from(projectMap.values());
+}
 
 export default async function DatabasePage() {
   const googleSheetData = await getGoogleSheetData();
   const databaseRows = buildDatabaseRows(googleSheetData);
-  const csvHeaders = [
-    'Project ID',
-    'New Project Timestamp',
-    'Project Name',
-    'Client Name',
-    'Email',
-    'Company Name',
-    'Company Type',
-    'Project Description',
-    'Client Message',
-    'Client Country',
-    'Client Timezone',
-    'Communication Platforms',
-    'Business Manager',
-    'Internal Instructions',
-    'Attachments',
-    'GDrive Folder Link',
-    'Version Upgrade Timestamp',
-    'Version',
-    'New Requirements',
-    'Estimation Timestamp',
-    'Estimated Hours',
-    'Estimated Cost',
-    'Approval Timestamp',
-    'Approved By',
-    'Approval Date',
-    'Expected Delivery Date',
-    'Delivery Method',
-    'Delivery Timestamp',
-    'Delivery Date',
-    'Delivered By',
-    'Delivery Notes',
-    'Feedback Timestamp',
-    'Satisfaction Score',
-    'Feedback',
-    'Client Contact',
-  ];
-
-  const csvRows = databaseRows.map(row => ({
-    'Project ID': row.projectId,
-    'New Project Timestamp': row.newProject?.timestamp ?? '',
-    'Project Name': row.newProject?.projectName ?? '',
-    'Client Name': row.newProject?.clientName ?? '',
-    'Email': row.newProject?.emailAddress ?? '',
-    'Company Name': row.newProject?.companyName ?? '',
-    'Company Type': row.newProject?.companyType ?? '',
-    'Project Description': row.newProject?.projectDescription ?? '',
-    'Client Message': row.newProject?.clientMessage ?? '',
-    'Client Country': row.newProject?.clientCountry ?? '',
-    'Client Timezone': row.newProject?.clientTimezone ?? '',
-    'Communication Platforms': row.newProject?.communicationPlatforms ?? '',
-    'Business Manager': row.newProject?.businessManager ?? '',
-    'Internal Instructions': row.newProject?.internalInstructions ?? '',
-    'Attachments': row.newProject?.attachments ?? '',
-    'GDrive Folder Link': row.newProject?.gdriveFolderLink ?? '',
-    'Version Upgrade Timestamp': row.versionUpgrade?.timestamp ?? '',
-    'Version': row.versionUpgrade?.version ?? '',
-    'New Requirements': row.versionUpgrade?.newRequirements ?? '',
-    'Estimation Timestamp': row.estimation?.timestamp ?? '',
-    'Estimated Hours': row.estimation?.estimatedHours ?? '',
-    'Estimated Cost': row.estimation?.estimatedCost ?? '',
-    'Approval Timestamp': row.approval?.timestamp ?? '',
-    'Approved By': row.approval?.approvedBy ?? '',
-    'Approval Date': row.approval?.approvalDate ?? '',
-    'Expected Delivery Date': row.approval?.expectedDeliveryDate ?? '',
-    'Delivery Method': row.approval?.deliveryMethod ?? '',
-    'Delivery Timestamp': row.delivery?.timestamp ?? '',
-    'Delivery Date': row.delivery?.deliveryDate ?? '',
-    'Delivered By': row.delivery?.deliveredBy ?? '',
-    'Delivery Notes': row.delivery?.notes ?? '',
-    'Feedback Timestamp': row.feedback?.timestamp ?? '',
-    'Satisfaction Score': row.feedback?.satisfactionScore ?? '',
-    'Feedback': row.feedback?.feedback ?? '',
-    'Client Contact': row.feedback?.clientContact ?? '',
-  }));
-
-  const csvContent = createCsv(csvHeaders, csvRows);
 
   return (
     <main className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -101,7 +99,94 @@ export default async function DatabasePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <DatabaseExport csvContent={csvContent} filename="project-database.csv" />
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Project ID</TableHead>
+                <TableHead>New Project Timestamp</TableHead>
+                <TableHead>Project Name</TableHead>
+                <TableHead>Client Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Company Name</TableHead>
+                <TableHead>Company Type</TableHead>
+                <TableHead>Project Description</TableHead>
+                <TableHead>Client Message</TableHead>
+                <TableHead>Client Country</TableHead>
+                <TableHead>Client Timezone</TableHead>
+                <TableHead>Communication Platforms</TableHead>
+                <TableHead>Business Manager</TableHead>
+                <TableHead>Internal Instructions</TableHead>
+                <TableHead>Attachments</TableHead>
+                <TableHead>GDrive Folder Link</TableHead>
+                <TableHead>Version Upgrade Timestamp</TableHead>
+                <TableHead>Version</TableHead>
+                <TableHead>New Requirements</TableHead>
+                <TableHead>Estimation Timestamp</TableHead>
+                <TableHead>Estimated Hours</TableHead>
+                <TableHead>Estimated Cost</TableHead>
+                <TableHead>Approval Timestamp</TableHead>
+                <TableHead>Approved By</TableHead>
+                <TableHead>Approval Date</TableHead>
+                <TableHead>Expected Delivery Date</TableHead>
+                <TableHead>Delivery Method</TableHead>
+                <TableHead>Delivery Timestamp</TableHead>
+                <TableHead>Delivery Date</TableHead>
+                <TableHead>Delivered By</TableHead>
+                <TableHead>Delivery Notes</TableHead>
+                <TableHead>Feedback Timestamp</TableHead>
+                <TableHead>Satisfaction Score</TableHead>
+                <TableHead>Feedback</TableHead>
+                <TableHead>Client Contact</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {databaseRows
+                .sort((a, b) => {
+                  const aTime = a.newProject?.timestamp || a.versionUpgrade?.timestamp || '';
+                  const bTime = b.newProject?.timestamp || b.versionUpgrade?.timestamp || '';
+                  return new Date(bTime).getTime() - new Date(aTime).getTime();
+                })
+                .map(row => (
+                  <TableRow key={row.projectId}>
+                    <TableCell className="font-medium">{row.projectId}</TableCell>
+                    <TableCell>{formatDate(row.newProject?.timestamp)}</TableCell>
+                    <TableCell>{row.newProject?.projectName || 'N/A'}</TableCell>
+                    <TableCell>{row.newProject?.clientName || 'N/A'}</TableCell>
+                    <TableCell>{row.newProject?.emailAddress || 'N/A'}</TableCell>
+                    <TableCell>{row.newProject?.companyName || 'N/A'}</TableCell>
+                    <TableCell>{row.newProject?.companyType || 'N/A'}</TableCell>
+                    <TableCell>{row.newProject?.projectDescription || 'N/A'}</TableCell>
+                    <TableCell>{row.newProject?.clientMessage || 'N/A'}</TableCell>
+                    <TableCell>{row.newProject?.clientCountry || 'N/A'}</TableCell>
+                    <TableCell>{row.newProject?.clientTimezone || 'N/A'}</TableCell>
+                    <TableCell>{row.newProject?.communicationPlatforms || 'N/A'}</TableCell>
+                    <TableCell>{row.newProject?.businessManager || 'N/A'}</TableCell>
+                    <TableCell>{row.newProject?.internalInstructions || 'N/A'}</TableCell>
+                    <TableCell>{row.newProject?.attachments || 'N/A'}</TableCell>
+                    <TableCell>{row.newProject?.gdriveFolderLink || 'N/A'}</TableCell>
+                    <TableCell>{formatDate(row.versionUpgrade?.timestamp)}</TableCell>
+                    <TableCell>{row.versionUpgrade?.version || 'N/A'}</TableCell>
+                    <TableCell>{row.versionUpgrade?.newRequirements || 'N/A'}</TableCell>
+                    <TableCell>{formatDate(row.estimation?.timestamp)}</TableCell>
+                    <TableCell>{row.estimation?.estimatedHours ?? 'N/A'}</TableCell>
+                    <TableCell>{row.estimation?.estimatedCost ?? 'N/A'}</TableCell>
+                    <TableCell>{formatDate(row.approval?.timestamp)}</TableCell>
+                    <TableCell>{row.approval?.approvedBy || 'N/A'}</TableCell>
+                    <TableCell>{formatDate(row.approval?.approvalDate)}</TableCell>
+                    <TableCell>{formatDate(row.approval?.expectedDeliveryDate)}</TableCell>
+                    <TableCell>{row.approval?.deliveryMethod || 'N/A'}</TableCell>
+                    <TableCell>{formatDate(row.delivery?.timestamp)}</TableCell>
+                    <TableCell>{formatDate(row.delivery?.deliveryDate)}</TableCell>
+                    <TableCell>{row.delivery?.deliveredBy || 'N/A'}</TableCell>
+                    <TableCell>{row.delivery?.notes || 'N/A'}</TableCell>
+                    <TableCell>{formatDate(row.feedback?.timestamp)}</TableCell>
+                    <TableCell>{row.feedback?.satisfactionScore ?? 'N/A'}</TableCell>
+                    <TableCell>{row.feedback?.feedback || 'N/A'}</TableCell>
+                    <TableCell>{row.feedback?.clientContact || 'N/A'}</TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </main>
