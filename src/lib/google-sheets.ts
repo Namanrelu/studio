@@ -282,3 +282,27 @@ export async function getGoogleSheetData(): Promise<AllSubmissions> {
     projectFeedbackSubmissions: dedupeByProjectId(projectFeedbackSubmissions) as ProjectFeedbackSubmission[],
   };
 }
+
+export async function getGoogleSheetRawData(): Promise<AllSubmissions> {
+  return loadSheets();
+}
+
+export async function getGoogleSheetData(): Promise<AllSubmissions> {
+  const {
+    newProjectSubmissions,
+    versionUpgradeSubmissions,
+    projectEstimationSubmissions,
+    projectApprovalSubmissions,
+    projectDeliverySubmissions,
+    projectFeedbackSubmissions,
+  } = await loadSheets();
+
+  return {
+    newProjectSubmissions: dedupeByProjectId(newProjectSubmissions) as NewProjectSubmission[],
+    versionUpgradeSubmissions: dedupeByProjectId(versionUpgradeSubmissions) as VersionUpgradeSubmission[],
+    projectEstimationSubmissions: dedupeByProjectId(projectEstimationSubmissions) as ProjectEstimationSubmission[],
+    projectApprovalSubmissions: dedupeByProjectId(projectApprovalSubmissions) as ProjectApprovalSubmission[],
+    projectDeliverySubmissions: dedupeByProjectId(projectDeliverySubmissions) as ProjectDeliverySubmission[],
+    projectFeedbackSubmissions: dedupeByProjectId(projectFeedbackSubmissions) as ProjectFeedbackSubmission[],
+  };
+}
