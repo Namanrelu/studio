@@ -47,7 +47,7 @@ const KEY_MAPS = {
     },
     projectEstimationSubmissions: {
       'Timestamp': 'timestamp',
-      'Project ID': 'projectId',
+      'Project Name - Client Name': 'projectId',
       'Estimated Hours': 'estimatedHours',
       'Estimated Cost': 'estimatedCost'
     },

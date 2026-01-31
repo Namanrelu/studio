@@ -42,9 +42,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Calendar as CalendarIcon, Package, Sunrise, Sun, Moon } from 'lucide-react';
+import { Calendar as CalendarIcon, Package, Sunrise, Sun, Moon, ClipboardEdit } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { NewProjectSubmission } from '@/lib/types';
+import { NewProjectSubmission, ProjectEstimationSubmission } from '@/lib/types';
 import {
   ChartContainer,
   ChartTooltip,
@@ -54,6 +54,7 @@ import { StatCard } from './stat-card';
 
 type SubmissionsAnalysisProps = {
   projects: NewProjectSubmission[];
+  estimations: ProjectEstimationSubmission[];
 };
 
 type ChartData = {
@@ -61,7 +62,7 @@ type ChartData = {
   count: number;
 };
 
-export function SubmissionsAnalysis({ projects }: SubmissionsAnalysisProps) {
+export function SubmissionsAnalysis({ projects, estimations }: SubmissionsAnalysisProps) {
   const [rangeOption, setRangeOption] = React.useState<string>('7');
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
     from: startOfDay(addDays(new Date(), -6)),
@@ -134,6 +135,12 @@ export function SubmissionsAnalysis({ projects }: SubmissionsAnalysisProps) {
       p.timestamp && isWithinInterval(new Date(p.timestamp), interval)
     );
   }, [projects, dateRange]);
+
+  const estimatedProjectsCount = React.useMemo(() => {
+    if (!filteredProjects.length) return 0;
+    const estimationProjectIds = new Set(estimations.map(e => e.projectId));
+    return filteredProjects.filter(p => estimationProjectIds.has(p.projectId)).length;
+  }, [filteredProjects, estimations]);
   
   const totalProjects = filteredProjects.length;
 
@@ -287,12 +294,18 @@ export function SubmissionsAnalysis({ projects }: SubmissionsAnalysisProps) {
           </div>
         </CardHeader>
       </Card>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
         <StatCard
           title="Total Projects"
           value={totalProjects}
           icon={Package}
           description="Projects in the selected date range"
+        />
+        <StatCard
+          title="Estimations Submitted"
+          value={`${estimatedProjectsCount} / ${totalProjects}`}
+          icon={ClipboardEdit}
+          description="Of projects in selected range"
         />
         <StatCard
           title="Morning"
