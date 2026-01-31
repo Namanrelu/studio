@@ -8,15 +8,15 @@ import type {
   ProjectFeedbackSubmission,
 } from '@/lib/types';
 
-const SHEET_ID = '1EZg3oVqZLoZPLpLHXph9GPcBV-vGZt2GHpEFrmJ19pI';
+const SHEET_ID = '1L6niqbInbQ40NA5L8loJlYDFckPGgt-OOWQfVZioYeM';
 
-const GID_MAP = {
-  newProjectSubmissions: '1420623075',
-  versionUpgradeSubmissions: '1903335532',
-  projectEstimationSubmissions: '1473213063',
-  projectApprovalSubmissions: '1384723730',
-  projectDeliverySubmissions: '1285433698',
-  projectFeedbackSubmissions: '179493132',
+const SHEET_NAME_MAP = {
+  newProjectSubmissions: 'New Project Submissions',
+  versionUpgradeSubmissions: 'Version Upgrade Submissions',
+  projectEstimationSubmissions: 'Project Estimation Submissions',
+  projectApprovalSubmissions: 'Project Approval Submissions',
+  projectDeliverySubmissions: 'Project Delivery Submissions',
+  projectFeedbackSubmissions: 'Project Feedback Submissions',
 };
 
 // Maps Google Sheet column headers to our data model keys.
@@ -41,7 +41,7 @@ const KEY_MAPS = {
     },
     versionUpgradeSubmissions: {
       'Timestamp': 'timestamp',
-      'Project ID': 'projectId',
+      'Versionized Project Name': 'projectId',
       'Version': 'version',
       'New Requirements': 'newRequirements'
     },
@@ -53,7 +53,7 @@ const KEY_MAPS = {
     },
     projectApprovalSubmissions: {
       'Timestamp': 'timestamp',
-      'Project ID': 'projectId',
+      'Project Name': 'projectId',
       'Approved By': 'approvedBy',
       'Approval Date': 'approvalDate',
       'Expected Delivery Date': 'expectedDeliveryDate',
@@ -61,21 +61,21 @@ const KEY_MAPS = {
     },
     projectDeliverySubmissions: {
       'Timestamp': 'timestamp',
-      'Project ID': 'projectId',
+      'Project Name': 'projectId',
       'Delivery Date': 'deliveryDate',
       'Delivered By': 'deliveredBy',
       'Notes': 'notes'
     },
     projectFeedbackSubmissions: {
       'Timestamp': 'timestamp',
-      'Project ID': 'projectId',
+      'Project Name': 'projectId',
       'Satisfaction Score (1-5)': 'satisfactionScore',
       'Feedback': 'feedback',
       'Client Contact': 'clientContact'
     }
 };
 
-type SheetNames = keyof typeof GID_MAP;
+type SheetNames = keyof typeof SHEET_NAME_MAP;
 
 
 function parseCsv(csv: string, sheetName: SheetNames): any[] {
@@ -208,7 +208,7 @@ function parseCsv(csv: string, sheetName: SheetNames): any[] {
     });
 
     if (sheetName === 'newProjectSubmissions') {
-        if (obj.projectName && obj.clientName) {
+        if (!obj.projectId && obj.projectName && obj.clientName) {
             obj.projectId = `${obj.projectName} - ${obj.clientName}`;
         }
     }
@@ -218,9 +218,10 @@ function parseCsv(csv: string, sheetName: SheetNames): any[] {
 }
 
 
-async function fetchSheet(gid: string, sheetName: SheetNames): Promise<any[]> {
+async function fetchSheet(sheetName: SheetNames): Promise<any[]> {
   try {
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`;
+    const sheetTitle = SHEET_NAME_MAP[sheetName];
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetTitle)}`;
     const response = await fetch(url, { cache: 'no-store' }); // Disable cache to get fresh data
     if (!response.ok) {
       console.error(`Failed to fetch sheet '${sheetName}'. Status: ${response.status}`);
@@ -235,6 +236,26 @@ async function fetchSheet(gid: string, sheetName: SheetNames): Promise<any[]> {
   }
 }
 
+function dedupeByProjectId<T extends { projectId?: string; timestamp?: string }>(items: T[]): T[] {
+  const itemMap = new Map<string, T>();
+  items.forEach(item => {
+    if (!item.projectId) {
+      return;
+    }
+    const existing = itemMap.get(item.projectId);
+    if (!existing) {
+      itemMap.set(item.projectId, item);
+      return;
+    }
+    const existingTime = existing.timestamp ? new Date(existing.timestamp).getTime() : 0;
+    const itemTime = item.timestamp ? new Date(item.timestamp).getTime() : 0;
+    if (itemTime >= existingTime) {
+      itemMap.set(item.projectId, item);
+    }
+  });
+  return Array.from(itemMap.values());
+}
+
 export async function getGoogleSheetData(): Promise<AllSubmissions> {
   const [
     newProjectSubmissions,
@@ -244,20 +265,20 @@ export async function getGoogleSheetData(): Promise<AllSubmissions> {
     projectDeliverySubmissions,
     projectFeedbackSubmissions,
   ] = await Promise.all([
-    fetchSheet(GID_MAP.newProjectSubmissions, 'newProjectSubmissions'),
-    fetchSheet(GID_MAP.versionUpgradeSubmissions, 'versionUpgradeSubmissions'),
-    fetchSheet(GID_MAP.projectEstimationSubmissions, 'projectEstimationSubmissions'),
-    fetchSheet(GID_MAP.projectApprovalSubmissions, 'projectApprovalSubmissions'),
-    fetchSheet(GID_MAP.projectDeliverySubmissions, 'projectDeliverySubmissions'),
-    fetchSheet(GID_MAP.projectFeedbackSubmissions, 'projectFeedbackSubmissions'),
+    fetchSheet('newProjectSubmissions'),
+    fetchSheet('versionUpgradeSubmissions'),
+    fetchSheet('projectEstimationSubmissions'),
+    fetchSheet('projectApprovalSubmissions'),
+    fetchSheet('projectDeliverySubmissions'),
+    fetchSheet('projectFeedbackSubmissions'),
   ]);
 
   return {
-    newProjectSubmissions: newProjectSubmissions as NewProjectSubmission[],
-    versionUpgradeSubmissions: versionUpgradeSubmissions as VersionUpgradeSubmission[],
-    projectEstimationSubmissions: projectEstimationSubmissions as ProjectEstimationSubmission[],
-    projectApprovalSubmissions: projectApprovalSubmissions as ProjectApprovalSubmission[],
-    projectDeliverySubmissions: projectDeliverySubmissions as ProjectDeliverySubmission[],
-    projectFeedbackSubmissions: projectFeedbackSubmissions as ProjectFeedbackSubmission[],
+    newProjectSubmissions: dedupeByProjectId(newProjectSubmissions) as NewProjectSubmission[],
+    versionUpgradeSubmissions: dedupeByProjectId(versionUpgradeSubmissions) as VersionUpgradeSubmission[],
+    projectEstimationSubmissions: dedupeByProjectId(projectEstimationSubmissions) as ProjectEstimationSubmission[],
+    projectApprovalSubmissions: dedupeByProjectId(projectApprovalSubmissions) as ProjectApprovalSubmission[],
+    projectDeliverySubmissions: dedupeByProjectId(projectDeliverySubmissions) as ProjectDeliverySubmission[],
+    projectFeedbackSubmissions: dedupeByProjectId(projectFeedbackSubmissions) as ProjectFeedbackSubmission[],
   };
 }
