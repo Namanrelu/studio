@@ -1,9 +1,20 @@
 export type NewProjectSubmission = {
   timestamp: string;
+  emailAddress?: string;
   projectId: string;
   projectName: string;
   clientName: string;
-  projectType: string;
+  companyName?: string;
+  companyType?: string;
+  projectDescription?: string;
+  clientMessage?: string;
+  clientCountry?: string;
+  clientTimezone?: string;
+  communicationPlatforms?: string;
+  businessManager?: string;
+  internalInstructions?: string;
+  attachments?: string;
+  gdriveFolderLink?: string;
 };
 
 export type VersionUpgradeSubmission = {

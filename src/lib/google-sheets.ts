@@ -23,10 +23,21 @@ const GID_MAP = {
 const KEY_MAPS = {
     newProjectSubmissions: {
       'Timestamp': 'timestamp',
-      'Project ID': 'projectId',
+      'Email Address': 'emailAddress',
       'Project Name': 'projectName',
       'Client Name': 'clientName',
-      'Project Type': 'projectType'
+      'Company Name': 'companyName',
+      'Company Type': 'companyType',
+      'Project Description': 'projectDescription',
+      'Client Message': 'clientMessage',
+      'Client Country': 'clientCountry',
+      'Client Timezone': 'clientTimezone',
+      'Communication Platforms': 'communicationPlatforms',
+      'Business Manager': 'businessManager',
+      'Internal Instructions': 'internalInstructions',
+      'Attachments': 'attachments',
+      'Normalized Name': 'projectId',
+      'Gdrive Folder Link': 'gdriveFolderLink'
     },
     versionUpgradeSubmissions: {
       'Timestamp': 'timestamp',

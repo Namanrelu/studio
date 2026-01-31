@@ -11,6 +11,7 @@ import { ProjectVelocityChart } from '@/components/dashboard/project-velocity-ch
 import { RecentFeedback } from '@/components/dashboard/recent-feedback';
 import { ProjectsTable } from '@/components/dashboard/projects-table';
 import { ClientSatisfactionChart } from '@/components/dashboard/client-satisfaction-chart';
+import { SubmissionsBySlotChart } from '@/components/dashboard/submissions-by-slot-chart';
 
 export default async function DashboardPage() {
   const googleSheetData = await getGoogleSheetData();
@@ -52,6 +53,9 @@ export default async function DashboardPage() {
         <div className="col-span-full lg:col-span-3">
           <ClientSatisfactionChart data={combinedData} />
         </div>
+      </div>
+      <div className="grid gap-4">
+        <SubmissionsBySlotChart data={googleSheetData.newProjectSubmissions} />
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
