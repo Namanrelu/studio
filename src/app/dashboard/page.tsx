@@ -2,6 +2,8 @@ import { SubmissionsAnalysis } from '@/components/dashboard/submissions-analysis
 import { getGoogleSheetData } from '@/lib/google-sheets';
 import { NewProjectSubmission, ProjectEstimationSubmission } from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
+
 function getUniqueProjects(projects: NewProjectSubmission[]): NewProjectSubmission[] {
   const projectMap = new Map<string, NewProjectSubmission>();
   projects.forEach(project => {
