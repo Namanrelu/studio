@@ -41,7 +41,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Package, Sunrise, Sun, Moon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NewProjectSubmission } from '@/lib/types';
 import {
@@ -49,6 +49,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
+import { StatCard } from './stat-card';
 
 type SubmissionsAnalysisProps = {
   projects: NewProjectSubmission[];
@@ -111,6 +112,30 @@ export function SubmissionsAnalysis({ projects }: SubmissionsAnalysisProps) {
       p.timestamp && isWithinInterval(new Date(p.timestamp), interval)
     );
   }, [projects, dateRange]);
+  
+  const totalProjects = filteredProjects.length;
+
+  const timeSlots = React.useMemo(() => {
+    const slots = {
+      morning: 0,
+      afternoon: 0,
+      night: 0,
+    };
+
+    filteredProjects.forEach(p => {
+      if (p.timestamp) {
+        const hour = new Date(p.timestamp).getHours();
+        if (hour >= 4 && hour < 12) {
+          slots.morning++;
+        } else if (hour >= 12 && hour < 20) {
+          slots.afternoon++;
+        } else {
+          slots.night++;
+        }
+      }
+    });
+    return slots;
+  }, [filteredProjects]);
 
   const chartData: ChartData[] = React.useMemo(() => {
     if (!dateRange?.from) return [];
@@ -153,85 +178,113 @@ export function SubmissionsAnalysis({ projects }: SubmissionsAnalysisProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-          <div>
-            <CardTitle className="font-headline">Incoming Projects</CardTitle>
-            <CardDescription>
-              Number of new projects submitted over a selected period.
-            </CardDescription>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Select value={rangeOption} onValueChange={setRangeOption}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select a range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">Today</SelectItem>
-                <SelectItem value="3">Last 3 days</SelectItem>
-                <SelectItem value="7">Last 7 days</SelectItem>
-                <SelectItem value="custom" disabled>Custom Range</SelectItem>
-              </SelectContent>
-            </Select>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={'outline'}
-                  className={cn(
-                    'w-full sm:w-[300px] justify-start text-left font-normal',
-                    !dateRange && 'text-muted-foreground'
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateRange?.from ? (
-                    dateRange.to ? (
-                      <>
-                        {format(dateRange.from, 'LLL dd, y')} -{' '}
-                        {format(dateRange.to, 'LLL dd, y')}
-                      </>
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Total Projects"
+          value={totalProjects}
+          icon={Package}
+          description="Projects in the selected date range"
+        />
+        <StatCard
+          title="Morning"
+          value={timeSlots.morning}
+          icon={Sunrise}
+          description="4 AM - 12 PM"
+        />
+        <StatCard
+          title="Afternoon"
+          value={timeSlots.afternoon}
+          icon={Sun}
+          description="12 PM - 8 PM"
+        />
+        <StatCard
+          title="Night"
+          value={timeSlots.night}
+          icon={Moon}
+          description="8 PM - 4 AM"
+        />
+      </div>
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+            <div>
+              <CardTitle className="font-headline">Incoming Projects</CardTitle>
+              <CardDescription>
+                Number of new projects submitted over a selected period.
+              </CardDescription>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={rangeOption} onValueChange={setRangeOption}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select a range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Today</SelectItem>
+                  <SelectItem value="3">Last 3 days</SelectItem>
+                  <SelectItem value="7">Last 7 days</SelectItem>
+                  <SelectItem value="custom">Custom Range</SelectItem>
+                </SelectContent>
+              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={'outline'}
+                    className={cn(
+                      'w-full sm:w-[300px] justify-start text-left font-normal',
+                      !dateRange && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>
+                          {format(dateRange.from, 'LLL dd, y')} -{' '}
+                          {format(dateRange.to, 'LLL dd, y')}
+                        </>
+                      ) : (
+                        format(dateRange.from, 'LLL dd, y')
+                      )
                     ) : (
-                      format(dateRange.from, 'LLL dd, y')
-                    )
-                  ) : (
-                    <span>Pick a date</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={dateRange?.from}
-                  selected={dateRange}
-                  onSelect={handleDateSelect}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
+                      <span>Pick a date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={handleDateSelect}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig} className="h-[300px] w-full">
-          <BarChart data={chartData} accessibilityLayer>
-            <CartesianGrid vertical={false} />
-            <XAxis
-              dataKey="label"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-            />
-            <YAxis allowDecimals={false} />
-            <ChartTooltip content={<ChartTooltipContent />} />
-            <Bar
-              dataKey="count"
-              fill="var(--color-count)"
-              radius={[4, 4, 0, 0]}
-            />
-          </BarChart>
-        </ChartContainer>
-      </CardContent>
-    </Card>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={chartConfig} className="h-[300px] w-full">
+            <BarChart data={chartData} accessibilityLayer>
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="label"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+              />
+              <YAxis allowDecimals={false} />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Bar
+                dataKey="count"
+                fill="var(--color-count)"
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ChartContainer>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

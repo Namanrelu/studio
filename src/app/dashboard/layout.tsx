@@ -19,6 +19,7 @@ import {
   LogOut,
   Database,
 } from 'lucide-react';
+import Link from 'next/link';
 
 import {
   DropdownMenu,
@@ -54,32 +55,40 @@ export default function DashboardLayout({
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                href="/dashboard"
+                asChild
                 tooltip={{ children: 'Dashboard' }}
               >
-                <LayoutDashboard />
-                <span>Dashboard</span>
+                <Link href="/dashboard">
+                  <LayoutDashboard />
+                  <span>Dashboard</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
-                href="/dashboard/database"
+                asChild
                 tooltip={{ children: 'Database' }}
               >
-                <Database />
-                <span>Database</span>
+                <Link href="/dashboard/database">
+                  <Database />
+                  <span>Database</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton href="#" tooltip={{ children: 'Reports' }}>
-                <BarChart />
-                <span>Reports</span>
+              <SidebarMenuButton asChild tooltip={{ children: 'Reports' }}>
+                <Link href="#">
+                  <BarChart />
+                  <span>Reports</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton href="#" tooltip={{ children: 'Settings' }}>
-                <Settings />
-                <span>Settings</span>
+              <SidebarMenuButton asChild tooltip={{ children: 'Settings' }}>
+                <Link href="#">
+                  <Settings />
+                  <span>Settings</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
