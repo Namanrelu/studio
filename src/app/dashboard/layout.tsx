@@ -18,6 +18,8 @@ import {
   User,
   LogOut,
   Database,
+  Search,
+  Download,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -72,6 +74,30 @@ export default function DashboardLayout({
                 <Link href="/dashboard/database">
                   <Database />
                   <span>Database</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip={{ children: 'Search' }}>
+                <Link href="/dashboard/search">
+                  <Search />
+                  <span>Search</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip={{ children: 'Duplicates' }}>
+                <Link href="/dashboard/duplicates">
+                  <Download />
+                  <span>Duplicates</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip={{ children: 'Unmapped' }}>
+                <Link href="/dashboard/unmapped">
+                  <Download />
+                  <span>Unmapped</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

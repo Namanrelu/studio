@@ -2,6 +2,8 @@ import { SubmissionsAnalysis } from '@/components/dashboard/submissions-analysis
 import { getGoogleSheetData } from '@/lib/google-sheets';
 import { NewProjectSubmission, ProjectEstimationSubmission } from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
+
 function getUniqueProjects(projects: NewProjectSubmission[]): NewProjectSubmission[] {
   const projectMap = new Map<string, NewProjectSubmission>();
   projects.forEach(project => {
@@ -36,7 +38,13 @@ export default async function DashboardPage() {
 
   return (
     <main className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <SubmissionsAnalysis projects={uniqueProjects} estimations={uniqueEstimations} />
+      <SubmissionsAnalysis
+        projects={uniqueProjects}
+        estimations={uniqueEstimations}
+        approvals={googleSheetData.projectApprovalSubmissions}
+        deliveries={googleSheetData.projectDeliverySubmissions}
+        feedback={googleSheetData.projectFeedbackSubmissions}
+      />
     </main>
   );
 }
